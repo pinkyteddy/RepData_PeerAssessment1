@@ -1,25 +1,145 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research - Personal activity monitoring"
+output: html_document
 ---
 
+##Introduction
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
-## Loading and preprocessing the data
+##Data
+The data for this assignment can be downloaded from the course web site: <https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip>
 
+The variables included in this dataset are:
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
+* steps: Number of steps taking in a 5-minute interval (missing values are coded as NA)
+* date: The date on which the measurement was taken in YYYY-MM-DD format
+* interval: Identifier for the 5-minute interval in which measurement was taken
+The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.
 
 
+##Loading and preprocessing the data
 
-## Are there differences in activity patterns between weekdays and weekends?
+####1. Load the data
+
+```{r , echo=TRUE}
+# Check and unzip if file doesn't exist
+if(!file.exists('activity.csv')){
+    unzip('activity.zip')
+}
+# Load data
+activityData <- read.csv('activity.csv')
+
+# print out first 10 rows
+head(activityData,10)
+```
+
+####2. Process/transform the data (if necessary) 
+```{r , echo=TRUE}
+# load all packages used in this exploratory analysis
+library('dplyr')
+
+
+```
+##What is mean total number of steps taken per day?
+
+For this part of the assignment, you can ignore the missing values in the dataset.
+```{r, echo=TRUE}
+myData <- activityData[ with (activityData, { !(is.na(steps)) } ), ]
+
+# print out first 10 rows
+head(myData)
+```
+####1. Calculate the total number of steps taken per day
+```{r, echo=TRUE}
+#Calculate total per day
+day_data <- group_by(myData, date)
+steps_per_day <- summarise(day_data, total = sum(steps))
+
+#Display data
+steps_per_day
+```
+
+
+####2. Make a histogram of the total number of steps taken each day
+
+```{r, echo=TRUE}
+hist(steps_per_day$total, main="Histogram of the total number of steps taken each day", 
+     xlab="Total number of steps each day")
+```
+
+####3. Calculate and report the mean and median of the total number of steps taken per day
+```{r, echo=TRUE}
+summary(steps_per_day)
+```
+
+* Mean of total number of steps taken day is **10766**
+* Median of total number of steps taken day is **10765**
+
+##What is the average daily activity pattern?
+
+####1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r, echo=TRUE}
+# preprocessing data
+plot_data <- tapply(myData$steps, myData$interval, mean, na.rm = TRUE)
+
+# create plot 
+plot(row.names(plot_data), plot_data, type = "l", xlab = "5-min interval", 
+    ylab = "Average across all Days", main = "Average number of steps taken", 
+    col = "blue")
+```
+
+####2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r, echo=TRUE}
+max_interval <- which.max(plot_data)
+
+names(max_interval)
+
+```
+
+##Imputing missing values
+
+Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
+
+* Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r, echo=TRUE}
+data_NA <- sum(is.na(activityData))
+
+data_NA
+
+```
+
+* Devise a strategy for filling in all of the missing values in the dataset.
+The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+```{r, echo=TRUE}
+stepAverage <- aggregate(steps ~ interval, data = activityData, FUN = mean)
+fillNAData <- numeric()
+for (i in 1:nrow(activityData)) {
+    temp <- activityData[i, ]
+    if (is.na(temp$steps)) {
+        steps <- subset(stepAverage, interval == temp$interval)$steps
+    } else {
+        steps <- temp$steps
+    }
+    fillNAData <- c(fillNAData, steps)
+}
+```
+
+* Create a new dataset that is equal to the original dataset but with the missing data filled in.
+```{r, echo=TRUE}
+new_data <- activityData
+new_data$steps <- fillNAData
+```
+
+* Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r, echo=TRUE}
+#Calcuate new data
+
+myNewTotal <- aggregate(steps ~ date, data = new_data, sum, na.rm = TRUE)
+#Draw new histogram
+hist(myNewTotal$steps, main = "Total steps by day", xlab = "day", col = "red")
+```
+
+
+
+
